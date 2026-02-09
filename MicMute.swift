@@ -44,6 +44,7 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
             isMuted = true
         }
         updateStatusIcon()
+        playFeedbackSound()
 
         // Verify the volume actually changed
         let actualVol = getInputVolume()
@@ -78,6 +79,11 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
         let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Microphone")
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
         button.image = image?.withSymbolConfiguration(config)
+    }
+
+    private func playFeedbackSound() {
+        let soundName = isMuted ? "Tink" : "Pop"
+        NSSound(named: NSSound.Name(soundName))?.play()
     }
 
     private func getInputVolume() -> Int {
