@@ -14,6 +14,7 @@
   <a href="MicMute.swift"><img src="https://img.shields.io/badge/swift-5.5+-orange?logo=swift&logoColor=white" alt="Swift 5.5+"></a>
   <a href="MicMute.swift"><img src="https://img.shields.io/badge/size-79_KB-brightgreen" alt="79 KB"></a>
   <a href="#installation"><img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Zero Dependencies"></a>
+  <a href="#install-with-homebrew"><img src="https://img.shields.io/badge/homebrew-available-orange?logo=homebrew&logoColor=white" alt="Homebrew"></a>
 </p>
 
 <p align="center">
@@ -49,7 +50,22 @@ Ever been in a Zoom call and couldn't find the mute button fast enough? MicMute 
 
 ## Installation
 
-### Quick Install (recommended)
+### Install with Homebrew
+
+The easiest way to install MicMute:
+
+```bash
+brew tap bahmetpalanci/tap
+brew install mic-mute
+```
+
+Then run:
+
+```bash
+open $(brew --prefix)/opt/mic-mute/MicMute.app
+```
+
+### Install from Source
 
 ```bash
 git clone https://github.com/bahmetpalanci/mic-mute.git
@@ -67,6 +83,10 @@ bash install.sh
 ### Uninstall
 
 ```bash
+# If installed with Homebrew
+brew uninstall mic-mute
+
+# If installed from source
 bash uninstall.sh
 ```
 
