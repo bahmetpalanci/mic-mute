@@ -4,6 +4,7 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var isMuted = false
     private var savedVolume: Int = 100
+    private var isToggling = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -30,6 +31,9 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func toggleMicrophone() {
+        guard !isToggling else { return }
+        isToggling = true
+
         if isMuted {
             setInputVolume(savedVolume > 0 ? savedVolume : 100)
             isMuted = false
@@ -40,6 +44,18 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
             isMuted = true
         }
         updateStatusIcon()
+
+        // Verify the volume actually changed
+        let actualVol = getInputVolume()
+        let expectedMuted = (actualVol == 0)
+        if expectedMuted != isMuted {
+            isMuted = expectedMuted
+            updateStatusIcon()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.isToggling = false
+        }
     }
 
     private func showQuitMenu() {
@@ -85,6 +101,7 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
         task.standardOutput = FileHandle.nullDevice
         task.standardError = FileHandle.nullDevice
         try? task.run()
+        task.waitUntilExit()
     }
 }
 
