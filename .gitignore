@@ -1,5 +1,6 @@
 # Build artifacts
 MicMute.app/Contents/MacOS/MicMute
+MicMute.app/Contents/_CodeSignature/
 MicMute
 
 # macOS
