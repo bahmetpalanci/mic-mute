@@ -1,0 +1,14 @@
+# Build artifacts
+MicMute.app/Contents/MacOS/MicMute
+MicMute
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+build/
+DerivedData/
