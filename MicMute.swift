@@ -5,6 +5,8 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
     private var isMuted = false
     private var savedVolume: Int = 100
     private var isToggling = false
+    private var muteSound: NSSound?
+    private var unmuteSound: NSSound?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -12,6 +14,9 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
         let currentVol = getInputVolume()
         isMuted = currentVol == 0
         if !isMuted { savedVolume = currentVol }
+
+        muteSound = NSSound(named: NSSound.Name("Tink"))
+        unmuteSound = NSSound(named: NSSound.Name("Pop"))
 
         guard let button = statusItem.button else { return }
         button.target = self
@@ -82,8 +87,9 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func playFeedbackSound() {
-        let soundName = isMuted ? "Tink" : "Pop"
-        NSSound(named: NSSound.Name(soundName))?.play()
+        let sound = isMuted ? muteSound : unmuteSound
+        sound?.stop()
+        sound?.play()
     }
 
     private func getInputVolume() -> Int {
