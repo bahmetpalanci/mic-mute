@@ -15,7 +15,7 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem.button else { return }
         button.target = self
         button.action = #selector(statusItemClicked)
-        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        button.sendAction(on: [.leftMouseDown, .rightMouseUp])
 
         updateStatusIcon()
     }
@@ -47,9 +47,9 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
         let quitItem = NSMenuItem(title: "Quit MicMute", action: #selector(quit), keyEquivalent: "")
         quitItem.target = self
         menu.addItem(quitItem)
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
+        if let button = statusItem.button {
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 5), in: button)
+        }
     }
 
     @objc private func quit() {
