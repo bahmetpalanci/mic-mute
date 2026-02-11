@@ -29,8 +29,11 @@ Ever been in a Zoom call and couldn't find the mute button fast enough? MicMute 
 
 - **Instant toggle** — Left-click the icon to mute/unmute. No menus, no delays.
 - **Visual feedback** — Icon changes between 🎤 and 🔇 so you always know your mic status.
-- **Lightweight** — 79 KB binary compiled from a single Swift file. No Electron, no bloat.
-- **Zero dependencies** — Built with native macOS APIs. Nothing to install except the app itself.
+- **Works with all devices** — Built-in mic, USB mics, Bluetooth headsets (AirPods, etc.) — all muted at hardware level via CoreAudio stream deactivation.
+- **Mutes ALL inputs** — Every physical input device is silenced simultaneously. No audio leaks through alternate mics.
+- **Survives device changes** — Plug in headphones or switch audio devices mid-call; mute state persists automatically.
+- **Lightweight** — Single Swift file compiled to a native macOS app. No Electron, no bloat.
+- **Zero dependencies** — Built with native macOS APIs (CoreAudio + AppKit). Nothing to install except the app itself.
 - **Remembers volume** — Restores your previous input volume when you unmute.
 - **Auto-start** — Optional login item to start automatically when you boot your Mac.
 - **Privacy-first** — Runs locally, no network access, no analytics, no data collection.
@@ -111,7 +114,7 @@ bash build.sh
 open MicMute.app
 ```
 
-The entire source code is in [`MicMute.swift`](MicMute.swift) — less than 100 lines.
+The entire source code is in [`MicMute.swift`](MicMute.swift) — a single file.
 
 ## Project Structure
 
@@ -133,24 +136,41 @@ mic-mute/
 
 MicMute uses native macOS APIs:
 
-- **`NSStatusItem`** — Places the icon in the menu bar
-- **SF Symbols** — Native `mic.fill` and `mic.slash.fill` icons
-- **`NSApplication.setActivationPolicy(.accessory)`** — Hides from Dock
-- **AppleScript bridge** — Controls system input volume via `osascript`
+- **CoreAudio HAL** — Direct hardware-level mute via `kAudioDevicePropertyMute`, `kAudioDevicePropertyVolumeScalar`, and `kAudioStreamPropertyIsActive` (stream deactivation)
+- **Multi-device control** — Enumerates all input devices via `kAudioHardwarePropertyDevices` and mutes every physical mic simultaneously
+- **Virtual device filtering** — Skips virtual and aggregate audio devices (e.g., app-created process taps) to avoid breaking other audio tools
+- **Device change listener** — Monitors `kAudioHardwarePropertyDefaultInputDevice` and re-applies mute state when devices are connected/disconnected
+- **AppleScript fallback** — Also sets system input volume via `osascript` as a belt-and-suspenders approach
+- **`NSStatusItem`** — Places the icon in the menu bar with SF Symbols (`mic.fill` / `mic.slash.fill`)
 - **LaunchAgent** — Auto-start on login via standard macOS mechanism
 
-No frameworks, no package managers, no build systems. Just `swiftc`.
+No frameworks beyond system libraries, no package managers, no build systems. Just `swiftc`.
 
 ## FAQ
 
 <details>
 <summary><strong>Does it work with all apps?</strong></summary>
-Yes. MicMute controls the system-wide input volume, so it affects all applications — Zoom, Teams, Discord, FaceTime, and any other app that uses your microphone.
+Yes. MicMute mutes at the hardware level via CoreAudio stream deactivation, so it affects all applications — Zoom, Teams, Discord, FaceTime, and any other app that uses your microphone.
+</details>
+
+<details>
+<summary><strong>Does it work with Bluetooth headsets (AirPods)?</strong></summary>
+Yes. MicMute uses CoreAudio stream deactivation (<code>kAudioStreamPropertyIsActive</code>) which works with all device types including Bluetooth. Traditional volume/mute APIs are ignored by some Bluetooth devices, but stream deactivation is effective at the driver level.
 </details>
 
 <details>
 <summary><strong>Does it need microphone permission?</strong></summary>
-No. MicMute doesn't access the microphone directly — it only controls the system input volume level through AppleScript.
+No. MicMute doesn't access the microphone directly — it controls device properties through the CoreAudio HAL and system input volume through AppleScript.
+</details>
+
+<details>
+<summary><strong>What happens when I plug in headphones?</strong></summary>
+MicMute detects device changes automatically. If you're muted, the mute state is re-applied to the new device. If you're unmuted, nothing changes.
+</details>
+
+<details>
+<summary><strong>Does it interfere with per-app audio tools?</strong></summary>
+No. MicMute filters out virtual and aggregate audio devices, so it won't break audio taps or per-app volume controllers (like TeamsVolume).
 </details>
 
 <details>
@@ -172,6 +192,14 @@ Right-click the menu bar icon and select "Quit MicMute". To remove auto-start, r
 | Mute Me | 8 MB | Free | No |
 | SoundSource | 25 MB | $39 | No |
 
+## Disclaimer
+
+- This software is provided **as-is**, without warranty of any kind. Use at your own risk.
+- MicMute is **not affiliated with, endorsed by, or associated with Apple Inc., Microsoft, Zoom, or any other company**.
+- MicMute controls audio device properties at the system level. While it has been tested with built-in microphones, USB microphones, and Bluetooth headsets (including AirPods Pro), behavior may vary depending on your specific hardware and macOS version.
+- Some professional audio interfaces may not support all mute methods. MicMute uses multiple fallback mechanisms (stream deactivation, CoreAudio mute/volume, AppleScript) to maximize compatibility.
+- MicMute does **not** collect, transmit, or store any personal data. It has no network access.
+
 ## Contributing
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
@@ -183,5 +211,5 @@ Contributions are welcome! Feel free to open an issue or submit a pull request.
 ---
 
 <p align="center">
-  <sub>Built with ❤️ using Swift and native macOS APIs</sub>
+  <sub>Built with Swift and native macOS CoreAudio APIs</sub>
 </p>
