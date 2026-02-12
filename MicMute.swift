@@ -261,20 +261,28 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
 
         if isMuted {
             dlog("UNMUTE")
-            performUnmute()
-            isMuted = false
+            // Play sound BEFORE unmuting so mic doesn't pick it up
+            playFeedbackSound()
+            // Small delay to let the sound finish before mic goes live
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.performUnmute()
+                self.isMuted = false
+                self.updateStatusIcon()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.isToggling = false
+                }
+            }
         } else {
             savedVolume = getASInputVolume()
             if savedVolume == 0 { savedVolume = 100 }
             dlog("MUTE")
             performMute()
             isMuted = true
-        }
-        updateStatusIcon()
-        playFeedbackSound()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self.isToggling = false
+            updateStatusIcon()
+            playFeedbackSound()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.isToggling = false
+            }
         }
     }
 
@@ -291,44 +299,68 @@ class MicMuteDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Mute ALL physical input devices
+    /// Mute ALL physical input devices (no stream deactivation — preserves Teams echo cancellation)
     private func performMute() {
         let inputDevices = physicalInputDeviceIDs()
         for devID in inputDevices {
             let name = getDeviceName(devID)
-
-            // 1. Try deactivating input streams
-            let streamResult = setInputStreamsActive(devID, active: false)
-            dlog("[\(name)] stream deactivate: \(streamResult)")
-
-            // 2. Set mute + volume 0
             muteDevice(devID, mute: true)
             dlog("[\(name)] mute+vol0 set")
         }
 
-        // 3. Also AppleScript as fallback
         setASInputVolume(0)
         dlog("AppleScript vol=0")
     }
 
-    /// Unmute ALL physical input devices
+    /// Unmute ALL physical input devices with gradual volume ramp
     private func performUnmute() {
         let inputDevices = physicalInputDeviceIDs()
+        let targetVolume = savedVolume > 0 ? savedVolume : 100
+
+        // Step 1: Unmute at low volume first (gives echo cancellation time to calibrate)
         for devID in inputDevices {
             let name = getDeviceName(devID)
-
-            // 1. Reactivate streams
-            let streamResult = setInputStreamsActive(devID, active: true)
-            dlog("[\(name)] stream activate: \(streamResult)")
-
-            // 2. Unmute + restore volume
             muteDevice(devID, mute: false)
-            dlog("[\(name)] unmute set")
+            setDeviceVolume(devID, volume: 0.1)
+            dlog("[\(name)] unmute at 10%")
+        }
+        setASInputVolume(10)
+        dlog("AppleScript vol=10 (ramp start)")
+
+        // Step 2: Ramp to 50% after 100ms
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            for devID in inputDevices {
+                self.setDeviceVolume(devID, volume: 0.5)
+            }
+            self.setASInputVolume(targetVolume / 2)
+            dlog("Ramp: 50%")
         }
 
-        // 3. AppleScript restore
-        setASInputVolume(savedVolume > 0 ? savedVolume : 100)
-        dlog("AppleScript vol=\(savedVolume)")
+        // Step 3: Full volume after 200ms
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            for devID in inputDevices {
+                self.setDeviceVolume(devID, volume: Float(targetVolume) / 100.0)
+            }
+            self.setASInputVolume(targetVolume)
+            dlog("Ramp: \(targetVolume)% (final)")
+        }
+    }
+
+    /// Set only volume (without toggling mute) on a device
+    private func setDeviceVolume(_ deviceID: AudioObjectID, volume: Float) {
+        for element: UInt32 in [kAudioObjectPropertyElementMain, 1, 2] {
+            var address = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyVolumeScalar,
+                mScope: kAudioObjectPropertyScopeInput,
+                mElement: element
+            )
+            var isSettable: DarwinBoolean = false
+            AudioObjectIsPropertySettable(deviceID, &address, &isSettable)
+            if isSettable.boolValue {
+                var vol = volume
+                AudioObjectSetPropertyData(deviceID, &address, 0, nil, UInt32(MemoryLayout<Float>.size), &vol)
+            }
+        }
     }
 
     private func showQuitMenu() {

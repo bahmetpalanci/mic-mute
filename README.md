@@ -29,8 +29,9 @@ Ever been in a Zoom call and couldn't find the mute button fast enough? MicMute 
 
 - **Instant toggle** — Left-click the icon to mute/unmute. No menus, no delays.
 - **Visual feedback** — Icon changes between 🎤 and 🔇 so you always know your mic status.
-- **Works with all devices** — Built-in mic, USB mics, Bluetooth headsets (AirPods, etc.) — all muted at hardware level via CoreAudio stream deactivation.
+- **Works with all devices** — Built-in mic, USB mics, Bluetooth headsets (AirPods, etc.) — all muted at hardware level via CoreAudio.
 - **Mutes ALL inputs** — Every physical input device is silenced simultaneously. No audio leaks through alternate mics.
+- **Echo-free unmute** — Gradual volume ramp on unmute prevents echo/feedback in video calls (Teams, Zoom, etc.). Sound feedback plays *before* mic goes live.
 - **Survives device changes** — Plug in headphones or switch audio devices mid-call; mute state persists automatically.
 - **Lightweight** — Single Swift file compiled to a native macOS app. No Electron, no bloat.
 - **Zero dependencies** — Built with native macOS APIs (CoreAudio + AppKit). Nothing to install except the app itself.
@@ -136,9 +137,10 @@ mic-mute/
 
 MicMute uses native macOS APIs:
 
-- **CoreAudio HAL** — Direct hardware-level mute via `kAudioDevicePropertyMute`, `kAudioDevicePropertyVolumeScalar`, and `kAudioStreamPropertyIsActive` (stream deactivation)
+- **CoreAudio HAL** — Direct hardware-level mute via `kAudioDevicePropertyMute` and `kAudioDevicePropertyVolumeScalar`
 - **Multi-device control** — Enumerates all input devices via `kAudioHardwarePropertyDevices` and mutes every physical mic simultaneously
 - **Virtual device filtering** — Skips virtual and aggregate audio devices (e.g., app-created process taps) to avoid breaking other audio tools
+- **Echo-free unmute** — Gradual volume ramp (10% → 50% → 100% over 200ms) gives apps time to recalibrate echo cancellation. Feedback sound plays before mic activation.
 - **Device change listener** — Monitors `kAudioHardwarePropertyDefaultInputDevice` and re-applies mute state when devices are connected/disconnected
 - **AppleScript fallback** — Also sets system input volume via `osascript` as a belt-and-suspenders approach
 - **`NSStatusItem`** — Places the icon in the menu bar with SF Symbols (`mic.fill` / `mic.slash.fill`)
@@ -150,12 +152,12 @@ No frameworks beyond system libraries, no package managers, no build systems. Ju
 
 <details>
 <summary><strong>Does it work with all apps?</strong></summary>
-Yes. MicMute mutes at the hardware level via CoreAudio stream deactivation, so it affects all applications — Zoom, Teams, Discord, FaceTime, and any other app that uses your microphone.
+Yes. MicMute mutes at the hardware level via CoreAudio, so it affects all applications — Zoom, Teams, Discord, FaceTime, and any other app that uses your microphone.
 </details>
 
 <details>
 <summary><strong>Does it work with Bluetooth headsets (AirPods)?</strong></summary>
-Yes. MicMute uses CoreAudio stream deactivation (<code>kAudioStreamPropertyIsActive</code>) which works with all device types including Bluetooth. Traditional volume/mute APIs are ignored by some Bluetooth devices, but stream deactivation is effective at the driver level.
+Yes. MicMute uses CoreAudio hardware-level mute which works with all device types including Bluetooth. It applies both mute property and volume control to ensure compatibility across all device types.
 </details>
 
 <details>
@@ -197,7 +199,7 @@ Right-click the menu bar icon and select "Quit MicMute". To remove auto-start, r
 - This software is provided **as-is**, without warranty of any kind. Use at your own risk.
 - MicMute is **not affiliated with, endorsed by, or associated with Apple Inc., Microsoft, Zoom, or any other company**.
 - MicMute controls audio device properties at the system level. While it has been tested with built-in microphones, USB microphones, and Bluetooth headsets (including AirPods Pro), behavior may vary depending on your specific hardware and macOS version.
-- Some professional audio interfaces may not support all mute methods. MicMute uses multiple fallback mechanisms (stream deactivation, CoreAudio mute/volume, AppleScript) to maximize compatibility.
+- Some professional audio interfaces may not support all mute methods. MicMute uses multiple fallback mechanisms (CoreAudio mute/volume, AppleScript) to maximize compatibility.
 - MicMute does **not** collect, transmit, or store any personal data. It has no network access.
 
 ## Contributing
